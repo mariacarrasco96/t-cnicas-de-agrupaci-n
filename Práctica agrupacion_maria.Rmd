@@ -1,0 +1,147 @@
+---
+title: "tipos"
+author: "Yo"
+date: "28/10/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+cargamos la base de datos y las librerías factoextra y factomineR 
+```{r}
+library(readr)
+ACPTIUSD <- read_delim("ACPTIUSD.csv", 
+                       ";", escape_double = FALSE, trim_ws = TRUE)
+library(factoextra)
+library(FactoMineR)
+```
+```{r}
+summary(ACPTIUSD) #observamos que la variable DEPO 1M tiene 195 NA's, así que como es un número considerable, vamos a eliminarlas.
+
+ACPTIUSD <- na.omit(ACPTIUSD)
+#de esta forma nos quedamos con 783 observaciones
+
+```
+1. Determinante de la matriz de correlaciones.
+Cuanto más bajo sea el determinante de la matriz de correlaciones, mayor asociación tendrán las variables entre sí, de forma que será adecuado llevar a cabo el ANFAC.
+```{r}
+matriz_correlaciones <- cor(ACPTIUSD[, -1])
+det(matriz_correlaciones) 
+library(corrplot)
+correlacion <- round(cor(ACPTIUSD[, -1]), 1)
+corrplot(correlacion, method = "number", type = "upper", main = "Gráfico de correlaciones", tl.srt = 50) 
+
+```
+2. Test de esfericidad de Bartlett.
+
+```{r}
+bartlett.test(ACPTIUSD[, -1])
+```
+3.Índice de KMO de Kaiser-Meyer-Olkin.
+
+```{r}
+library(psych)
+KMO(ACPTIUSD[, -1])
+```
+
+extraer los factores necesarios para la representación de los datos. 
+
+```{r}
+acp <- PCA(ACPTIUSD[,2:11], graph = T)
+acp#aplicamos PCA a las observaciones seleccionadas
+
+
+```
+
+Extraemos los autovalores y observamos la varianza explicada cn factominer
+```{r}
+acp$eig
+get_eig(acp)
+```
+
+
+porcentaje explicado de varianza por cada uno de los componentes.
+```{r}
+fviz_eig(acp, addlabels = TRUE, hjust = -0.3) + 
+        labs(title = "Gráfico de sedimentación", x = "Dimensiones", y = "% Varianza explicada") +
+        theme_minimal()
+```
+
+
+```{r}
+library(nFactors)
+ev <- eigen(cor(ACPTIUSD[, -1])) # Obtención de los autovalores
+ap <- parallel(subject = nrow(ACPTIUSD[, -1]),var = ncol(ACPTIUSD[, -1]),rep = 100,cent = .05)
+nS <- nScree(x = ev$values, aparallel = ap$eigen$qevpea)
+plotnScree(nS,xlab = "Número de Componentes",ylab = "Autovalores",
+           main = "Solución por autovalores para determinar
+           el número de factores o componentes")
+```
+
+
+ relación de las variables con los componentes principales:
+```{r}
+var = get_pca_var(acp)
+var
+```
+```{r}
+acp
+```
+
+
+```{r}
+var$cos2
+```
+gráfico de correlaciones
+```{r}
+library(corrplot)
+corrplot(var$cos2, is.corr = FALSE, main="Gráfico de correlaciones entre variables y componentes") 
+```
+Y podemos, asimismo, representarlas gráficamente en el denominado círculo o gráfico de correlaciones
+```{r}
+fviz_pca_var(acp, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE )+
+             labs(title="Mapa de ejes principales", subtitle="cos2")
+```
+La interpretación del gráfico es sencilla, pues tenemos tanto la información acerca de la asociación entre las variables (las positivamente correladas se agruparán, mientras que las que lo están de forma negativa se encontrarán en cuadrantes opuestos) como la calidad de la representación del espacio de componentes en virtud de la longitud de la flecha que representa la variable: a mayor longitud, mayor calidad, y viceversa.
+```{r}
+fviz_contrib(acp, choice = "var", axes = 1 ) +
+  labs(title = "Contribuciones a la Dimensión 1")
+
+fviz_contrib(acp, choice = "var", axes = 2 ) +
+  labs(title = "Contribuciones a la Dimensión 2")
+
+fviz_cos2(acp, choice = "var", axes = 1:2) +
+  labs(title = "Contribuciones a las dimensiones 1 y 2")
+
+```
+
+
+
+
+```{r}
+fviz_pca_biplot(acp,  label = "var",
+                addEllipses = TRUE, ellipse.level = 0.95) +
+        labs(title = "Gráfico conjunto de observaciones y variables - Biplot") +
+        theme_minimal()
+```
+La rotación factorial
+
+```{r}
+FactoresVARIMAX <- factanal(ACPTIUSD[, -1], factors = 2, rotation = "varimax")
+FactoresVARIMAX
+```
+
+
+
+
+
+
+
+
+
+
+
